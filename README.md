@@ -1,2 +1,3 @@
-H517 Visualization Design, Analysis,& Evaluation project 1
-Website :- https://sonithapriya.github.io/DataVisualization_Cholera/documentation.html
+H517 Visualization Design, Analysis,& Evaluation Project 1
+
+https://sonithapriya.github.io/DataVisualization_Cholera/documentation.html
