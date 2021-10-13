@@ -1,0 +1,72 @@
+* {
+  margin: 0;
+}
+
+body {
+  font-family: Helvetica, sans-serif;
+}
+
+.header {
+  padding: 25px 0px 25px 30px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header div {
+  float: left;
+}
+.header div a {
+  text-decoration: none;
+  color: #414141;
+  width: 33%;
+  padding: 0px 40px 0px 0px;
+}
+
+#main {
+  display: grid;
+  height: 100vh;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 2fr 1fr;
+  grid-template-areas:
+    'svg1 svg2 svg3'
+    'l1 l2 l3';
+  grid-gap: 0.2rem;
+}
+
+.svg-container {
+  padding: 30px;
+  /* width: 600px;
+  height: 600px; */
+}
+#map {
+  /* overflow: hidden; */
+  grid-area: svg1;
+}
+
+#deaths {
+  grid-area: svg2;
+}
+
+#distribution {
+  grid-area: svg3;
+}
+
+#legend {
+  grid-area: l1;
+}
+
+#toggles {
+  grid-area: l2;
+}
+
+#toggles select {
+  padding: 10px;
+  width: 150px;
+  height: 40px;
+}
+
+select > option {
+  padding: 10px;
+  height: 50px;
+}

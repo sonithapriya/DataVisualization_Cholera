@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Priyanka - Cholera Visualization</title>
+	<script src="https://d3js.org/d3.v7.min.js"></script>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<div class="header">
+		<h2>London's Cholera Epidemic 1854</h2>
+		<div id="test">
+			<a href="documentation.html">Documentation</a>
+			<a href="video.html">Video</a> 
+		</div>
+	</div>
+    <div id = "doc">
+        <a href="index.html" 
+        style="float:right;
+        color: #414141;
+        padding: 40px 40px 0px 0px;">Back</a>
+    </div>
+    <div style = "padding: 40px 0px 100px 40px;font-family:sans-serif;">
+        <p> <h3>About:</h3><br>
+            The London's cholera epidemic 1854 is created by Priyanka Surapaneni for 
+            H517: Visualization Design, Analysis, & Evaluation course project.<br><br>
+            Objective : To reproduce Dr.John Snow's epidemic map as an interactive map using D3.js <br><br>
+            The data - streets, pumps and death locations and other demographic data are provided as the part this project -
+            <a href="https://khreda.com/teaching/fall2021/H517/project1/">Project Details</a><br><br>
+            <h3>Design:</h3><br>
+            <h4>1. Layout</h4><br>
+            <img width="600" height="400" src="imgs/layout_2.png">
+            <img width="600" height="400" src="imgs/layout_3.png"> <br><br>
+            a. First, I decided to render the map with labels and time series graph as shown in above left side image. 
+            Later, I rearranged the layout to include dropdown, histogram plot <br> to right side and moved the labels to bottom as shown above right side image.<br><br>
+            <h4>2.Visualizations</h4><br>
+            a. Created stable interactive map with streets, pumps and deaths locations. <br><br>
+            b. Map with 5 Street names labels, work house and brewery along with Zoom and pan functions within SVG view-box.<br><br>
+            <img width="600" height="500" src="imgs/layout_4.png"> 
+            <img width="600" height="500" src="imgs/layout_5.png"> <br><br>
+            c.Interactive time series graph with number of deaths per each day during the epidemic period and cursor movement that reflects on map. <br><br>
+            <img width="1000" height="500" src="imgs/layout_7.png"> <br><br>
+            d. Drop down menu for showing according to gender and age on map.<br><br>
+            <img width="1000" height="500" src="imgs/layout_8.png"> <br><br>
+            e.Bar graph for age and gender distribution and change according to date.<br><br>
+            <img width="1000" height="500" src="imgs/layout_9.png"> <br><br>
+            <h4>3.Legend and colors</h4><br>
+            a.I have used color oracle to check the deuteranopia common color blindness and selected d3.schemeSet3 for gender colors and d3.schemePaired for age group colors.<br><br>
+            <img src="imgs/layout_10.png"> <br><br>
+            <h4>4.Findings</h4><br>
+            <img width="500" height="500" src="imgs/layout_11.png"> <br><br>
+            a.Deaths within age group of 1-10 and >80 are more compare to other age groups and death rate between males and females are not significant.<br><br>
+            <img width="500" height="500" src="imgs/layout_12.png"> <br><br>
+            b.From time series plot deaths peaked on September 1st and most of deaths are between August 31st to September 10th. <br><br>
+            <h4>5.References</h4><br>
+            <a href="https://github.com/d3/d3/blob/main/API.md">D3 Documentation</a><br><br>
+            
+        </p>
+    </div>
+</body>
+</html>

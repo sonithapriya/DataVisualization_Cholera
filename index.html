@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Priyanka - Cholera Visualization</title>
+	<script src="https://d3js.org/d3.v7.min.js"></script>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<div class="header">
+		<h2>London's Cholera Epidemic 1854</h2>
+		<div id="test">
+			<a href="documentation.html">Documentation</a>
+			<a href="video.html">Video</a> 
+		</div>
+	</div>
+	<div id="main">
+		<div id="toggles">
+			<label for="plotby">Plot by: </label>
+			<select id="plotby" name="plotby">
+				<option value="age">Age</option>
+				<option value="gender">Gender</option>
+			</select>
+		</div>
+		<div id="map" class="svg-container"></div>
+		<div id="deaths" class="svg-container"></div>
+		<div id="distribution" class="svg-container"></div>
+		<div id="legend" class="svg-container"></div>
+	</div>
+	<script>
+		const scale = 1;
+		const width = 450 * scale;
+		const height = 450 * scale;
+		const margin = {
+			left: 50 * scale,
+			right: 20 * scale,
+			top: 20 * scale,
+			bottom: 40 * scale
+		};
+
+		const mapsvg = d3.create('svg').attr('viewBox', [0, 0, width, height]);
+		const deathsvg = d3.create('svg').attr('viewBox', [0, 0, width, height]);
+		const legendsvg = d3.create('svg').attr('viewBox', [0, 0, width, height]);
+		const distrib = d3.create('svg').attr('viewBox', [0, 0, width, height]);
+
+		const mainEle = document.getElementById('main');
+		const mapEle = document.getElementById('map');
+		const deathsEle = document.getElementById('deaths');
+		const distribEle = document.getElementById('distribution');
+		const legendEle = document.getElementById('legend');
+		map.append(mapsvg.node())
+		deathsEle.append(deathsvg.node());
+		legendEle.append(legendsvg.node());
+		distribEle.append(distrib.node());
+		let byAge = true;
+		let byGender = false;
+		let togglePlot = (event) => {
+			console.log(event.target.value)
+			if (event.target.value === 'age') {
+				byAge = true;
+				byGender = false;
+			} else {
+				byAge = false;
+				byGender = true;
+			}
+		}
+		document.getElementById('plotby').addEventListener('change', togglePlot)
+		console.log('fetching files')
+		let dASText, dDaysText, pumpsText, streets;
+		let das, ddays, dpumps;
+		const loadFiles = async () => {
+			das = await d3.csv('./deaths_age_sex.csv', (d) => {
+				return {x: +d.x, y: +d.y, age: +d.age, gender: +d.gender};
+			});
+			// dASText = await dASRes.text();
+
+			ddays = await d3.csv('./deathdays.csv', (d) => {
+				return {date: new Date(`${d.date}-1884`), deaths: +d.deaths};
+			});
+			// dDaysText = await dDaysRes.text();
+		
+			dpumps = await d3.csv('./pumps.csv', (d) => {
+				return {x: +d.x, y: +d.y};
+			});
+			// pumpsText = await pumpsRes.text();
+
+			streets = await d3.json('streets.json', d => {
+				return d.map(({x, y}) => {
+					return {x: +x, y: +y};
+				})
+			});
+		}
+		loadFiles().then((response) => {
+			// Data
+			let mapPoints = das;
+			let dData = ddays;
+			
+			const genderColors = d3.scaleOrdinal()
+									.domain([0, 1])
+  									.range(d3.schemeSet3);
+			const ageGroupColors = d3.scaleOrdinal()
+									.domain([0, 1, 2, 3, 4, 5])
+  									.range(d3.schemePaired);
+			let myColor = (d) => {
+				if (byAge) {
+					return ageGroupColors(d.age);
+				} else if (byGender) {
+					return genderColors(d.gender);
+				}
+			};
+			let mylegendColor = (d, type) => {
+				if (type === 'age') {
+					return ageGroupColors(d);
+				} else if (type === 'gender') {
+					return genderColors(d);
+				}
+			};
+
+			// SVG 1: MAP
+			let xScale = d3.scaleLinear()
+							.domain(d3.extent(streets, (d) => {
+								return d3.max(d, v => v.x);
+							}))
+							.nice()
+    						.range([margin.left, width - margin.right]);
+			let yScale = d3.scaleLinear()
+							.domain(d3.extent(streets, (d) => {
+								return d3.max(d, v => v.y);
+							}))
+							.nice()
+    						.range([margin.bottom, height - margin.top]);
+
+			let linef = d3.line()
+					.x(d => { return xScale(d.x)})
+					.y(d => yScale(d.y));
+
+			// Drawing the streets and map
+			let sg = mapsvg.append('g'); // creating a group for streets
+			streets.forEach(street => {
+				// console.log(street);
+				
+				sg.append('path')
+					.datum(street)
+					.attr('fill', 'none')
+					.attr('stroke', 'black')
+      				.attr('stroke-width', 1)
+					.attr('d', linef)
+					.attr('class', 'street');
+			});
+
+			
+			// TODO: Draw street lables
+
+			// Drawing pumps
+			let pumpW = 6 * scale;
+			let pumpH = 6 * scale;
+			let pg = mapsvg.append('g');
+			dpumps.forEach(pump => {
+				// let rect = d3.path().rect(pump.x, pump.y, pumpW, pumpH);
+				console.log
+				pg.append('rect')
+					.attr('x', xScale(pump.x) - (pumpW / 2))
+					.attr('y', yScale(pump.y) - (pumpH / 2))
+					.attr('width', pumpW)
+					.attr('height', pumpH)
+					.attr('fill', 'black')
+					.attr('class', 'pump');
+			});
+
+			// Drowing map points
+			let mappg = mapsvg.append('g').classed('map-points', true);
+			let drawPoints = () => {
+				
+				mappg.selectAll("circle")
+					.data(mapPoints)
+					.enter()
+					.append("circle")
+					.attr('stroke', 'black')
+					.attr('stroke-width', 0.2)
+					.attr("fill", d => myColor(d))
+					.attr("cx", d => xScale(d.x))
+					.attr("cy", d => yScale(d.y))
+					.attr("r", 3)
+					.classed('map-point', true);
+				mappg.selectAll('.map-point').data(mapPoints).exit().remove();	
+				
+			}
+			drawPoints();
+			
+			// Street names
+			const streetNames = [
+				{name: 'CEORCE STREET', x: 86, y: 281, rotate: -72},
+				{name: 'BREWER STREET', x: 275, y: 160, rotate: 43},
+				{name: 'REGENT STREET', x: 170, y: 250, rotate:-60},
+				{name: 'OXFORD STREET', x: 198, y: 360, rotate:10},
+				{name: 'DEAN STREET', x: 350, y: 375, rotate:-66},
+			];
+			let streetg = mapsvg.append('g')
+							.attr('class', 'streets')
+			streetg.selectAll('.street-name')
+					.data(streetNames)
+          			.enter()
+					.append("text")
+					.attr('font-size', '10')
+          			.classed('street-name', true)
+          			.attr("x", d => d.x)
+			        .attr("y", d => d.y)
+					.attr("transform", d =>  `rotate(${d.rotate} ${d.x}, ${d.y})`)
+       			//.attr("transform", function(d) { return "translate(" + d.x+"," +d.y ")"; })
+           			// .attr("dy", ".35em")
+    			//.text("ddddddddd");
+           			.text(d => d.name);
+
+			// Work house
+			const workhouse = {x: 245, y: 250, w: 30, h: 38, rotate: 25};
+			mapsvg.append('rect')
+				.classed('work-house', true)
+				.attr('width', workhouse.w)
+				.attr('height', workhouse.h)
+				.attr('x', workhouse.x)
+				.attr('y', workhouse.y)
+				.attr('fill', 'green')
+				.attr("transform", `rotate(${workhouse.rotate} ${workhouse.x}, ${workhouse.y})`)
+			mapsvg.append('text')
+				.classed('place', true)
+				.attr('x', workhouse.x - 10)
+				.attr('y', workhouse.y + 30)
+				.attr('fill', 'red')
+				.attr('font-size', '10')
+				.text('workhouse')
+
+			// Brewery
+			const brewery = {x: 285, y: 255, w: 30, h: 16, rotate: -62};
+			mapsvg.append('rect')
+				.classed('work-house', true)
+				.attr('width', brewery.w)
+				.attr('height', brewery.h)
+				.attr('x', brewery.x)
+				.attr('y', brewery.y)
+				.attr('fill', 'purple')
+				.attr("transform", `rotate(${brewery.rotate} ${brewery.x}, ${brewery.y})`)
+			mapsvg.append('text')
+				.classed('place', true)
+				.attr('x', brewery.x)
+				.attr('y', brewery.y)
+				.attr('fill', 'red')
+				.attr('font-size', '10')
+				.text('brewery')
+			// zoom
+			let zoomed = ({transform}) => {
+				mapsvg.attr('transform', transform);
+			}
+			mapsvg.call(d3.zoom()
+				.extent([[0, 0], [width, height]])
+				.scaleExtent([1, 8])
+				.on("zoom", zoomed));
+
+
+			// SVG 3: draw gender distribution
+			let distData = [];
+						
+			let getBar = (source, ageGroup) => {
+				// if (!ageGroup) throw new Error('Please provide age group to sort');
+				let value = {};
+				value.group = ''
+				value.fdeaths = 0;
+				value.mdeaths = 0;
+				switch(ageGroup) {
+					case 0: value.group = '0-10';
+							break;
+					case 1: value.group = '11-20';
+							break;
+					case 2: value.group = '21-40';
+							break;
+					case 3: value.group = '41-60';
+							break;
+					case 4: value.group = '61-80';
+							break;
+					case 5: value.group = '>80';
+							break;
+				}
+				for(const point of source) {
+					if (point.age === ageGroup) {
+						if(point.gender === 0) {
+							value.mdeaths++;
+						} else if(point.gender === 1) {
+							value.fdeaths++;
+						}
+					}
+				}
+				return value;
+			}
+			let prepareData = (source) => {
+				let data = [];
+				data.push(getBar(source, 0));
+				data.push(getBar(source, 1));
+				data.push(getBar(source, 2));
+				data.push(getBar(source, 3));
+				data.push(getBar(source, 4));
+				data.push(getBar(source, 5));
+				distData = data;
+			}
+			prepareData(das);
+			let ageScale = d3.scaleBand()
+							.domain(['0-10', '11-20', '21-40', '41-60', '61-80', '>80'])
+							.range([margin.left, width - margin.right]);
+			let deathScale = d3.scaleLinear()
+							.domain(d3.extent([0, ...d3.extent(distData, d => d.fdeaths), ...d3.extent(distData, d => d.mdeaths)]))
+							.nice()
+							.range([height - margin.bottom * 2, margin.top]);
+			let aAxis = g => g
+				.attr("transform", `translate(0,${height - margin.bottom * 2})`)
+				.call(d3.axisBottom(ageScale).ticks(width / 80))
+				.call(g => g.select(".domain").remove())
+				.call(g => g.selectAll(".tick line").clone()
+					.attr("y2", -height)
+					.attr("stroke-opacity", 0.1))
+				.call(g => g.append("text")
+					.attr("x", width - 4)
+					.attr("y", -4)
+					.attr("font-weight", "bold")
+					.attr("text-anchor", "end")
+					.attr("fill", "black")
+					.text('age')
+					)
+			let dAxis = g => g
+				.attr("transform", `translate(${margin.left},0)`)
+				.call(d3.axisLeft(deathScale).ticks(null, "d"))
+				.call(g => g.select(".domain").remove())
+				.call(g => g.selectAll(".tick line").clone()
+					.attr("x2", width)
+					.attr("stroke-opacity", 0.1))
+				.call(g => g.select(".tick:last-of-type text").clone()
+					.attr("x", 4)
+					.attr("text-anchor", "start")
+					.attr("font-weight", "bold")
+					.attr("fill", "black")
+					.text('deaths')
+					)
+			
+			const agx = distrib.append('g')
+					      .call(aAxis);
+  			const dgy = distrib.append('g')
+      						.call(dAxis);
+			distrib.append('g')
+					.append('text')
+					.attr('fill', 'black')
+					.attr('x', margin.left)
+					.attr('y', height - 5)
+					.text('Distribution of gender against age group and deaths')
+			console.log('deathScale of 0 is', height - deathScale(0) - margin.bottom)
+			let dgroup = distrib.append('g');
+			let renderDistribution = () => {
+				console.log(distData)
+				dgroup.selectAll('.bar1')
+					.data(distData)
+					.enter()
+					.append('rect')
+					.attr('x', d => ageScale(d.group))
+					.attr('y', d => deathScale(d.mdeaths))
+					.attr('width', ageScale.bandwidth() / 2)
+					.attr('height', d => height - deathScale(d.mdeaths) - margin.bottom * 2)
+					.attr('fill', 'steelblue')
+					.classed('bar1', true)
+				dgroup.selectAll('.bar2')
+					.data(distData)
+					.enter()
+					.append('rect')
+					.attr('x', d => ageScale(d.group) + (ageScale.bandwidth() / 2))
+					// .attr('y')
+					.attr('y', d => deathScale(d.fdeaths))
+					.attr('width', 31)
+					.attr('height', d => height - deathScale(d.fdeaths) - margin.bottom * 2)
+					.attr('fill', 'yellow')
+					.classed('bar2', true)
+
+				dgroup.selectAll('.bar1').data(distData).exit().remove();
+				// dgroup.selectAll('.bar2').data(distData).exit().remove();
+
+			};
+			renderDistribution();
+
+			// Functions
+						
+			let updateData = (event, d) => {
+				if (event.defaultPrevented) return; // dragged
+				// console.log('in update data', d)
+				// let re = d3.select(this);
+				// re.attr('fill', 'grey');
+				
+				// dData = ddays.filter(dDay => {
+				// 	if (dDay.date < d[0].date)
+				// 		return dDay;
+				// });
+				mapsvg.selectAll('map-point').remove();
+				let deaths = 0;
+				for(const day of ddays) {
+					if (day.date <= d[0].date)
+						deaths = deaths + day.deaths
+				}
+				// let deaths = ddays.reduce((prevValue, currDay) => {
+				// 	console.log('p', prevValue)
+				// 	console.log('c', typeof currDay.deaths)
+				// 	if (currDay.date <= d[0].date)
+				// 		prevValue += currDay.deaths;
+				// }, 0);
+				// console.log(deaths)
+				mapPoints = das.slice(0, deaths - 1);
+				drawPoints();
+				// console.log('updated data', das.length, mapPoints.length);
+
+
+				// update distribution
+				prepareData(mapPoints);
+				distrib.selectAll('.bar1').remove();
+				distrib.selectAll('.bar2').remove()
+				renderDistribution();
+			}
+
+			// SVG 2: Timeline of deaths per day
+			let length = (path) => {
+				return d3.create("svg:path").attr("d", path).node().getTotalLength();
+			}
+			
+			// Drawing the dearth per day graph
+			let x = d3.scaleUtc()
+    			.domain(d3.extent(ddays, d => d.date))
+    			.range([margin.left, width - margin.right]);
+			
+			let y = d3.scaleLinear()
+				.domain(d3.extent(ddays, d => d.deaths))
+				.nice()
+				.range([height - margin.bottom * 2, margin.top]);
+
+			let line = d3.line()
+				.curve(d3.curveCatmullRom)
+				.x(d => x(d.date))
+				.y(d => y(d.deaths))
+			const l = length(line(ddays));
+
+			let xAxis = g => g
+				.attr("transform", `translate(0,${height - margin.bottom * 2})`)
+				.call(d3.axisBottom(x).ticks(width / 80))
+				.call(g => g.select(".domain").remove())
+				.call(g => g.selectAll(".tick line").clone()
+					.attr("y2", -height)
+					.attr("stroke-opacity", 0.1))
+				.call(g => g.append("text")
+					.attr("x", width - 4)
+					.attr("y", -4)
+					.attr("font-weight", "bold")
+					.attr("text-anchor", "end")
+					.attr("fill", "black")
+					.text(dData.date)
+					)
+
+			let yAxis = g => g
+				.attr("transform", `translate(${margin.left},0)`)
+				.call(d3.axisLeft(y).ticks(null, "d"))
+				.call(g => g.select(".domain").remove())
+				.call(g => g.selectAll(".tick line").clone()
+					.attr("x2", width)
+					.attr("stroke-opacity", 0.1))
+				.call(g => g.select(".tick:last-of-type text").clone()
+					.attr("x", 4)
+					.attr("text-anchor", "start")
+					.attr("font-weight", "bold")
+					.attr("fill", "black")
+					.text(dData.deaths)
+					)
+					
+			const gx = deathsvg.append('g')
+					      .call(xAxis);
+  			const gy = deathsvg.append('g')
+      						.call(yAxis);
+			let pathsg = deathsvg.append('g');
+			pathsg.append("path")
+				.datum(dData)
+				.attr("fill", "none")
+				.attr("stroke", "black")
+				.attr("stroke-width", 1.5)
+				.attr("stroke-linejoin", "round")
+				.attr("stroke-linecap", "round")
+				.attr("stroke-dasharray", `0,${l}`)
+				.attr("d", line)
+				.transition()
+				.duration(1500)
+				.ease(d3.easeLinear)
+				.attr("stroke-dasharray", `${l},${l}`);
+			let pointsg = deathsvg.append('g');
+			pointsg.append("g")
+				.attr("fill", "white")
+				.attr("stroke", "black")
+				.attr("stroke-width", 2)
+				.selectAll("circle")
+				.data(dData)
+				.join("circle")
+				.attr("cx", d => x(d.date))
+				.attr("cy", d => y(d.deaths))
+				.attr("r", 3);
+
+			
+			// Mouse events
+			// let tooltip = d3.select('#main')
+			// 				.append('div')
+			// 				.style("opacity", 0)
+			// 				.attr("class", "tooltip")
+			// 				.style("background-color", "white")
+			// 				.style("border", "solid")
+			// 				.style("border-width", "2px")
+			// 				.style("border-radius", "5px")
+			// 				.style("padding", "5px")
+			// let mouseover = (d) => {
+			// 	tooltip
+			// 	.style("opacity", 1)
+			// 	// d3.select(this)
+			// 	// .style("stroke", "black")
+			// 	// .style("opacity", 1)
+			// }
+			// let mousemove = (d) => {
+			// 	tooltip
+			// 	.html(`On ${d.date} there are ${d.deaths}`)
+			// 	// .style("left", (d3.mouse(this)[0]+70) + "px")
+			// 	// .style("top", (d3.mouse(this)[1]) + "px")
+			// }
+			// let mouseout = (d) => {
+			// 	tooltip
+			// 	.style("opacity", 0)
+			// 	// d3.select(this)
+			// 	// .style("stroke", "none")
+			// 	// .style("opacity", 0.8)
+			// }
+			deathsvg.append("g")
+				.attr("fill", "none")
+				.attr("pointer-events", "all")
+				.selectAll("rect")
+				.data(d3.pairs(dData))
+				.enter()
+				.append("rect")
+				.attr("x", ([a, b]) => x(a.date))
+				.attr("height", height)
+				.attr("width", ([a, b]) => x(b.date) - x(a.date))
+				.on("mouseover", updateData)
+				// .on("mouseout", mouseout);
+			deathsvg.append('g')
+				.append('text')
+				.classed('title', true)
+				.attr('fill', 'black')
+				.attr('x', width / 2 - 100)
+				.attr('y', height)
+				.text('Shows the timeline of deaths')
+  			// deathsvg.append(tooltip.node);
+			
+
+
+			// SVG 4: legend svg
+			// let lx = d3.scaleLinear()
+			// 	.domain(d3.extent([0, 1]))
+			// 	.nice()
+			// 	.range([height - margin.bottom, margin.top]);
+			// let ly = d3.scaleLinear()
+			// 	.domain(d3.extent([0, 1, 2, 3, 4, 5]))
+			// 	.nice()
+			// 	.range([margin.top, height]);
+			let lg = d3.scaleBand()
+				.domain(['Male', 'Female'])
+				.range([margin.top, height]);
+			let la = d3.scaleBand()
+				.domain(['0-10', '11-20', '21-40', '41-60', '61-80', '>80'])
+				.range([margin.top, height]);
+			let lb = d3.scaleBand()
+				.domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+				.range([margin.top, height]);
+			let genderData = [
+				{i: 0, text: 'Male'},
+				{i: 1, text: 'Female'}
+			];
+			let ageData = [
+				{i: 0, text: '0-10'},
+				{i: 1, text: '11-20'},
+				{i: 2, text: '21-40'},
+				{i: 3, text: '41-60'},
+				{i: 4, text: '61-80'},
+				{i: 5, text: '>80'}
+			];
+			let gg = legendsvg.append('g');
+			gg.selectAll('mycircle')
+				.data(genderData)
+				.enter()
+				.append('circle')
+				.attr('fill', d => mylegendColor(d.i, 'gender'))
+				.attr('cx', margin.left)
+				.attr('cy', (d, i) => lb(d.i + 1))
+				.attr('r', 6)
+			gg.append('text')
+				.attr('class', 'legend-text')
+				.attr('x', margin.left)
+				.attr('y', lb(0))
+				.text('Gender');
+			gg.selectAll('mylables')
+				.data(genderData)
+				.enter()
+				.append('text')
+				.attr('x', margin.left + 20)
+				.attr('y', (d, i) => lb(d.i + 1))
+				.text(d => d.text)
+				.attr("text-anchor", "left")
+    			.style("alignment-baseline", "middle");
+			
+			let apad = 4;
+			let ag = legendsvg.append('g');
+			ag.selectAll('mycircle')
+				.data(ageData)
+				.enter()
+				.append('circle')
+				.attr("fill", d => mylegendColor(d.i, 'age'))
+				.attr("cx", d => margin.left * apad)
+				.attr("cy", (d, i) => lb(d.i + 1))
+				.attr("r", 6);
+			ag.append('text')
+				.attr('class', 'legend-text')
+				.attr('x', margin.left * apad)
+				.attr('y', lb(0))
+				.text('Age');
+			ag.selectAll('mylables')
+				.data(ageData)
+				.enter()
+				.append('text')
+				.attr('x', margin.left * apad + 20)
+				.attr('y', (d, i) => lb(d.i + 1))
+				.text(d => d.text)
+				.attr("text-anchor", "left")
+    			.style("alignment-baseline", "middle");
+
+			let plpad = 6;
+			let sqsize = 10;
+			let plg = legendsvg.append('g');
+			plg.append('text')
+				.attr('class', 'legend-text')
+				.attr('x', margin.left * plpad)
+				.attr('y', lb(0))
+				.text('Places');
+			plg.append('rect')
+				.attr('fill', 'black')
+				.attr('width', sqsize)
+				.attr('height', sqsize)
+				.attr('x', margin.left * plpad)
+				.attr('y', lb(1) - sqsize / 2)
+			plg.append('text')
+				.attr('x', margin.left * plpad + 20)
+				.attr('y', lb(1))
+				.text('Pumps')
+				.attr("text-anchor", "left")
+    			.style("alignment-baseline", "middle");
+			plg.append('rect')
+				.attr('fill', 'purple')
+				.attr('width', sqsize)
+				.attr('height', sqsize)
+				.attr('x', margin.left * plpad)
+				.attr('y', lb(2) - sqsize / 2)
+			plg.append('text')
+				.attr('x', margin.left * plpad + 20)
+				.attr('y', lb(2))
+				.text('Brewery')
+				.attr("text-anchor", "left")
+    			.style("alignment-baseline", "middle");
+			plg.append('rect')
+				.attr('fill', 'green')
+				.attr('width', sqsize)
+				.attr('height', sqsize)
+				.attr('x', margin.left * plpad)
+				.attr('y', lb(3) - sqsize / 2)
+			plg.append('text')
+				.attr('x', margin.left * plpad + 20)
+				.attr('y', lb(3))
+				.text('Workhouse')
+				.attr("text-anchor", "left")
+    			.style("alignment-baseline", "middle");
+			// END
+		});
+
+		
+		
+	</script>
+</body>
+</html>
